@@ -1,0 +1,67 @@
+Expr =  base "." | base "." options | options | options base "." | options base "." options
+
+options = options options | Option2
+
+Option2 = Option2 Option2 | prefix Triple | Triple
+
+base = @base URI
+prefix = prefix prefix | prefix Option2 | @prefix name : URI "."
+
+Triple = Sub Pred Obj "."
+
+Sub = URI
+Pred = URI
+OBJ = URI | Literal
+
+Literal = -Int | +Int | String | true | false
+
+URI = "<"link">" | "<"Highlink"#"tag">"
+
+tag = String
+
+link = "http://" | "https://" | "http://"String"/" | "https://"String"/"
+
+Highlink = "http://"String"/" | "https://"String"/"
+
+
+
+
+
+
+----EXAMPLE-----
+
+<http://www.cw.org/subjectA> <http://www.cw.org/predicateA> <http://www.cw.org/objectA> .  
+
+@base <http://www.cw.org/> .
+
+<subjectB> <predicateB> <objectB> .         
+@prefix p: <http://www.cw.org/pprefix/> .
+p:subjectC p:predicateC p:objectC .    
+
+@prefix q: <http://www.cw.org/qprefix/> .
+p:subjectD q:predicateD q:objectD .     
+
+@prefix r: <rprefix/> .                   
+p:subjectE r:predicateE q:objectE .     
+
+<testSubA> <hasNegInt> -50 .
+
+-----------------------------------------------------------------------------------------------------
+
+Expr 
+
+options base options
+
+Option2 base options
+
+Triple base options 
+
+Sub Pred Obj base options
+
+URI URI URI base options 
+
+URI URI URI base  Option2 Option2 Option2 Option2 Option2
+
+URI URI URI base  Triple prefix Triple prefix Triple prefix Triple Triple 
+
+URI URI URI base  Triple prefix Triple prefix Triple prefix Triple Triple 
