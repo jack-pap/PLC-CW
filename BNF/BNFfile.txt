@@ -7,7 +7,8 @@ Option2 = Option2 Option2 | prefix Triple | Triple
 base = @base URI
 prefix = prefix prefix | prefix Option2 | @prefix name : URI "."
 
-Triple = Sub Pred Obj "."
+Triple = Sub repeated Pred Obj "." | Sub Pred Obj "."
+repeated = repeated Pred Obj ";" | Pred Obj ";"
 
 Sub = URI
 Pred = URI
@@ -15,13 +16,11 @@ OBJ = URI | Literal
 
 Literal = -Int | +Int | String | true | false
 
-URI = "<"link">" | "<"Highlink"#"tag">"
+URI = "<"link">" | "<"link"#"tag">"
 
 tag = String
 
-link = "http://" | "https://" | "http://"String"/" | "https://"String"/"
-
-Highlink = "http://"String"/" | "https://"String"/"
+link = "http://"String"/"
 
 
 

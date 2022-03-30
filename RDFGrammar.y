@@ -37,20 +37,23 @@ prefix : prefix prefix
        | @prefix name : URI \.
 
 Triple : '<' Sub '>' '<' Pred '>' '<' Obj '>' '.'
+       | '<' Sub '>' Repeated '<' Pred '>' '<' Obj '>' '.'
+
+Repeated : '<' Pred '>' '<' Obj '>' ';'
+         | Repeated '<' Pred '>' '<' Obj '>' ';'
 
 Sub  : URI
 Pred : URI
 OBJ  : URI 
      | Literal
 
-Literal : -Int 
-        | +Int 
+Literal : $sign? $digit+ 
         | String 
         | true 
         | false
 
 URI : "<"link">" 
-    | "<"Highlink"#"tag">"
+    | "<"link"#"tag">"
 
 tag : String
 
