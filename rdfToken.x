@@ -6,17 +6,36 @@ module RDFToken where
 $digit = 0-9      
 $alpha = [a-zA-Z] 
 $sign = [\+ \-]
+$prefixName = $alpha \:
+$name = [a-zA-Z0-9]
 
 tokens :-      
 $white+         ;
   "--".*        ;    
-  $sign? $digit+   { \p s -> TokenIntLiteral p (read s) } 
+  $sign? $digit+  + { \p s -> TokenIntLiteral p (read s) } 
   $alpha           { \p s -> TokenStrLiteral p s } 
   "@base"          { \p s -> TokenBase p }
-  "@prefix"        { \p s -> TokenPrefix p }
+  "@prefix"        { \p s -> Token
+  $prefixName      { \p s -> TokenPrefixName p s }Prefix p
+  
+
+  "http://"
+  $name+ \. --domain
+  \/ $name+  --subdomain
+  \# $name+ --tag
+  
+  --symbols
+  
+  \.               { \p s -> TokenFullStop p }
+  "http://"
+  --symbols
+  \/ 
+  \#
+  
   \.               { \p s -> TokenFullStop p }
   \<               { \p s -> TokenLessThan p }
   \>               { \p s -> TokenGreaterThan p }
+
 
 -- Each action has type :: AlexPosn -> String -> RDFToken
 
