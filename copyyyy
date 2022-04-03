@@ -1,0 +1,19 @@
+  "--".*        ;     
+  true                { \p s -> TokenTrue p s } 
+  false               { \p s -> TokenFalse p s } 
+  "@base"             { \p s -> TokenBase p }
+  "@prefix"            { \p s -> TokenPrefix p }
+  $alpha+ $white? \:  { \p s -> TokenPrefixName p s } 
+  "http://"           { \p s -> TokenHTTP p }
+  \. $name+           { \p s -> TokenDomainA p s }
+  \/ $name*           { \p s -> TokenSubDomain p s }
+  \/ \# $name+        { \p s -> TokenTag p s }
+  $name+              { \p s -> TokenDomainA p s }
+  \"                  { \p s -> TokenQuote p }
+  \;                  { \p s -> TokenSemiColon p }
+  \,                  { \p s -> TokenComma p }
+  \.                  { \p s -> TokenFullStop p }
+  \<                  { \p s -> TokenLessThan p }
+  \>                  { \p s -> TokenGreaterThan p }
+  $sign? $digit+      { \p s -> TokenIntLiteral p (read s) } 
+  \" $ascii+ \"       { \p s -> TokenStrLiteral p s }
