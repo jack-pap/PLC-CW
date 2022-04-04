@@ -6,73 +6,72 @@ import RDFTokens
 %name parseCalc 
 %tokentype { RDFToken } 
 %error { parseError }
-%token 
-    $sign? $digit+   { TokenIntLiteral _ $$ } 
-    $alpha           { TokenStrLiteral _ $$ } 
+%token   
+    true             { TokenTrue _ $$ } 
+    false            { TokenFalse _ $$ } 
     "@base"          { TokenBase _ }
     "@prefix"        { TokenPrefix _ }
+    $name+           { TokenName _ $$ }       
+    ':'              { TokenColon _ } 
+    '/'              { TokenBackSlash _ }
+    '#'              { TokenTag _ }
+    '"'              { TokenQuote _ }
+    ';'              { TokenSemiColon _ }
+    ','              { TokenComma _ }
     '.'              { TokenFullStop _ }
     '<'              { TokenLessThan _ }
     '>'              { TokenGreaterThan _ }
+    $sign? $digit+   { TokenIntLiteral _ $$ }  
+    '"' $ascii+ '"'  { TokenStrLiteral _ $$ }
 
 %% 
 
-Expr : "@base" '<' link '>' '.'           { Base $3 }
-     | "@base" '<' link '>' '.' options   { BAndO $3 $6 }
-     | options                            { $1 }
-     | options "@base" '<' link '>' '.'   { OAndB $1 $4 }
-     | options base "." options           { OandBAndO $1 $2 $4 }
+Expr : "@base" URI '.'                    { Base $2 }
+     | "@base" URI '.' PAndT              { BAndO $2 $4 }
+     | PAndT                              { $1 }
+     | PAndT "@base" URI '.'              { OAndB $1 $3 }
+     | PAndT "@base" URI '.' PAndT        { OAndBAndO $1 $3 $5 }
 
-options : options options 
-        | Option2
+PAndT : PAndT PAndT 
+      | prefix Triple 
+      | Triple
 
-Option2 : Option2 Option2 
-        | prefix Triple 
-        | Triple
+prefix : prefix prefix  
+       | @prefix name':' URI '.'
 
-base : @base URI
+Triple : '<' Sub '>' Repeated '.'
 
-prefix : prefix prefix 
-       | prefix Option2 
-       | @prefix name : URI \.
+Repeated : '<' Pred '>' ObjList ';' Repeated
+         | '<' Pred '>' ObjList 
 
-Triple : '<' Sub '>' '<' Pred '>' '<' Obj '>' '.'
-       | '<' Sub '>' Repeated '<' Pred '>' '<' Obj '>' '.'
-
-Repeated : '<' Pred '>' '<' Obj '>' ';'
-         | Repeated '<' Pred '>' '<' Obj '>' ';'
+ObjList : '<' Obj '>' ',' ObjList 
+        | '<' Obj '>'
 
 Sub  : URI
 Pred : URI
-OBJ  : URI 
+Obj  : URI 
      | Literal
 
 Literal : $sign? $digit+ 
-        | String 
+        | '"' $ascii+ '"' 
         | true 
         | false
 
-URI : "<"link">" 
-    | "<"link"#"tag">"
+URI : '<' link '>'
 
-tag : String
+Tag : '#' $name+    
 
-link : "http://"String"/" 
+Domains : $name+ '.' Domains
+        | $name+
 
+SubDomains : $name+ '/' SubDomains
+           | $name+
 
+link : "http://" Domains '/'
+     | "http://" Domains '/' SubDomains
+     | "http://" Domains '/' Tag 
+     | "http://" Domains '/' SubDomains '/' Tag     
 
-
-Exp : let var '=' Exp in Exp { Let $2 $4 $6 } 
-    | Exp '+' Exp            { Plus $1 $3 } 
-    | Exp '-' Exp            { Minus $1 $3 } 
-    | Exp '*' Exp            { Times $1 $3 } 
-    | Exp '/' Exp            { Div $1 $3 } 
-    | Exp '^' Exp            { Expo $1 $3}
-    | '(' Exp ')'            { $2 } 
-    | '-' Exp %prec NEG      { Negate $2 } 
-    | int                    { Int $1 } 
-    | var                    { Var $1 } 
-    
 { 
 parseError :: [RDFToken] -> a
 parseError [] = error "Parse error on empty file" 
