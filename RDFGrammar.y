@@ -1,6 +1,6 @@
 { 
 module RDFGrammar where 
-import RDFTokens 
+import RDFToken
 }
 
 %name parseCalc 
@@ -11,7 +11,8 @@ import RDFTokens
     false            { TokenFalse _ $$ } 
     "@base"          { TokenBase _ }
     "@prefix"        { TokenPrefix _ }
-    $name+           { TokenName _ $$ }       
+    "http://"        { TokenHTTP _ }
+    name             { TokenName _ $$ }       
     ':'              { TokenColon _ } 
     '/'              { TokenBackSlash _ }
     '#'              { TokenTag _ }
@@ -21,70 +22,135 @@ import RDFTokens
     '.'              { TokenFullStop _ }
     '<'              { TokenLessThan _ }
     '>'              { TokenGreaterThan _ }
-    $sign? $digit+   { TokenIntLiteral _ $$ }  
-    '"' $ascii+ '"'  { TokenStrLiteral _ $$ }
+    int              { TokenIntLiteral _ $$ }  
+    str              { TokenStrLiteral _ $$ }
 
 %% 
 
 Expr : "@base" URI '.'                    { Base $2 }
-     | "@base" URI '.' PAndT              { BAndO $2 $4 }
+     | "@base" URI '.' PAndT              { BandO $2 $4 }
      | PAndT                              { $1 }
-     | PAndT "@base" URI '.'              { OAndB $1 $3 }
-     | PAndT "@base" URI '.' PAndT        { OAndBAndO $1 $3 $5 }
+     | PAndT "@base" URI '.'              { OandB $1 $3 }
+     | PAndT "@base" URI '.' PAndT        { OandBandO $1 $3 $5 }
 
-PAndT : PAndT PAndT 
-      | prefix Triple 
-      | Triple
+PAndT : PAndT PAndT                       { $1 $2 }
+      | Prefix Triple                     { PandT $1 $2 }
+      | Triple                            { Triplee $1 }
 
-prefix : prefix prefix  
-       | @prefix name':' URI '.'
+Prefix : Prefix Prefix                    { $1 $2 }
+       | "@prefix" name':' URI '.'        { Prefixx $2 $4 }
 
-Triple : '<' Sub '>' Repeated '.'
+Triple : '<' Sub '>' Repeated '.'         { Tripled $2 $4 }
 
-Repeated : '<' Pred '>' ObjList ';' Repeated
-         | '<' Pred '>' ObjList 
+Repeated : '<' Pred '>' ObjList ';' Repeated { ReRepeated $2 $4 $6 }
+         | '<' Pred '>' ObjList              { Repeatedd $2 $4 }
 
-ObjList : '<' Obj '>' ',' ObjList 
-        | '<' Obj '>'
+ObjList : '<' Obj '>' ',' ObjList { ObjectListss $2 $5 }
+        | '<' Obj '>'             { ObjectLists $2 }
 
-Sub  : URI
-Pred : URI
-Obj  : URI 
-     | Literal
+Sub  : URI                      { SubjectURI $1 }
+     | Shorthand                { SubjectSH $1 }
 
-Literal : $sign? $digit+ 
-        | '"' $ascii+ '"' 
-        | true 
-        | false
+Pred : URI                      { PredicateURI $1 }
+     | Shorthand                { PredicateSH $1 }
 
-URI : '<' link '>'
+Obj  : URI                      { ObjectURI $1 }
+     | Shorthand                { ObjectSH $1 }
+     | Literal                  { ObjectLit $1 }
 
-Tag : '#' $name+    
+Literal : int                   { LiteralInt $1 }
+        | str                   { LiteralString $1 }
+        | true                  { LiteralTrue }
+        | false                 { LiteralFalse }
 
-Domains : $name+ '.' Domains
-        | $name+
+URI : '<' Link '>'              { URI $2 }
 
-SubDomains : $name+ '/' SubDomains
-           | $name+
+Shorthand : '<' name '>'      { ShortURIB $2 }
+          | name':' name    { ShortURIP $1 $3 }
 
-link : "http://" Domains '/'
-     | "http://" Domains '/' SubDomains
-     | "http://" Domains '/' Tag 
-     | "http://" Domains '/' SubDomains '/' Tag     
+Tag : '#' name                { Tags $2 }
+
+Domain : name '.' Domain      { Domainss $1 $3 } 
+       | name                 { Domains $1 }
+
+SubDomain : name '/' SubDomain  { SubDomainss $1 $3 }
+          | name                { SubDomains $1 }
+
+Link : "http://" Domain '/'                     { LinkD $2 }
+     | "http://" Domain '/' SubDomain           { LinkDS $2 $4 } 
+     | "http://" Domain '/' Tag                 { LinkDT $2 $4 }
+     | "http://" Domain '/' SubDomain '/' Tag   { LinkDST $2 $4 $6 }    
 
 { 
 parseError :: [RDFToken] -> a
 parseError [] = error "Parse error on empty file" 
 parseError (t:ts) = error ("Parse error at " ++ tokenPosn t)
 
-data Exp = Let String Exp Exp 
-         | Plus Exp Exp 
-         | Minus Exp Exp 
-         | Times Exp Exp 
-         | Div Exp Exp 
-         | Expo Exp Exp
-         | Negate Exp
-         | Int Int 
-         | Var String 
-         deriving Show 
-} 
+data Expr = Base URI 
+          | BandO URI PAndT 
+          | OandB PAndT URI 
+          | OandBandO PAndT URI PAndT 
+          deriving Show
+          
+
+data PAndT = PandT Prefix Triple
+           | Triplee Triple 
+           deriving Show
+
+data Prefix = Prefixx String URI 
+
+data Triple = Tripled Sub Repeated
+
+data Repeated = ReRepeated Pred ObjList Repeated
+              | Repeatedd Pred ObjList
+              deriving Show
+
+data ObjList = ObjectListss Obj ObjList
+             | ObjectLists Obj
+                deriving Show
+
+
+data Sub = SubjectURI URI
+         | SubjectSH Shorthand
+         deriving Show
+
+data Pred = PredicateURI URI
+          | PredicateSH Shorthand
+          deriving Show
+
+data Obj = ObjectURI URI
+         | ObjectSH Shorthand
+         | ObjectLit Literal
+         deriving Show
+         
+data Literal = LiteralInt Int
+             | LiteralString String
+             | LiteralTrue
+             | LiteralFalse
+             deriving Show
+
+data URI = URIs Link
+        deriving Show 
+
+data Shorthand = ShortURIB String
+                | ShortURIP String String
+                deriving Show
+
+data Tag = Tags String
+           deriving Show
+
+data Domain = Domainss String Domain
+            | Domains String
+            deriving Show 
+            
+    
+data Subdomain = Subdomainss String Subdomain
+               | Subdomains String
+               deriving Show
+
+data Link = LinkD Domain
+          | LinkDS Domain Subdomain
+          | LinkDT Domain Subdomain
+          | LinkDST Domain Subdomain Tag
+          deriving Show
+}
