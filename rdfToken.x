@@ -15,7 +15,8 @@ $white+         ;
   true                { \p s -> TokenTrue p s } 
   false               { \p s -> TokenFalse p s } 
   "@base"             { \p s -> TokenBase p }
-  "@prefix"           { \p s -> TokenPrefix p } 
+  "@prefix"           { \p s -> TokenPrefix p }
+  "http://"           { \p s -> TokenHTTP p } 
   $name+              { \p s -> TokenName p s }       
   \:                  { \p s -> TokenColon p } 
   \/                  { \p s -> TokenBackSlash p }
@@ -28,6 +29,8 @@ $white+         ;
   \>                  { \p s -> TokenGreaterThan p }
   $sign? $digit+      { \p s -> TokenIntLiteral p (read s) }  
   \" $ascii+ \"       { \p s -> TokenStrLiteral p s }
+  
+  
 
 {
   
@@ -40,6 +43,7 @@ data RDFToken =
   TokenFalse AlexPosn String           |
   TokenBase AlexPosn                   |
   TokenPrefix AlexPosn                 |
+  TokenHTTP AlexPosn                   |
   TokenName AlexPosn String            |
   TokenColon AlexPosn                  |
   TokenBackSlash AlexPosn              |
@@ -51,7 +55,7 @@ data RDFToken =
   TokenLessThan AlexPosn               |
   TokenGreaterThan AlexPosn            |
   TokenIntLiteral AlexPosn Int         |
-  TokenStrLiteral AlexPosn String                                                
+  TokenStrLiteral AlexPosn String                                            
   deriving Show 
 
 -- Write a function tokenPosn in your Alex file that extracts the source code position (line:column) from a given token as a string e.g. "5:43".
@@ -61,6 +65,7 @@ tokenPosn (TokenTrue (AlexPn a l c) i) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenFalse (AlexPn a l c) i) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenBase (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenPrefix (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
+tokenPosn (TokenHTTP  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenName (AlexPn a l c) s) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenColon (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenBackSlash (AlexPn a l c)) = show(l) ++ ":" ++ show(c)

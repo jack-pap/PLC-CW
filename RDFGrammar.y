@@ -33,12 +33,18 @@ Expr : "@base" URI '.'                    { Base $2 }
      | PAndT "@base" URI '.'              { OandB $1 $3 }
      | PAndT "@base" URI '.' PAndT        { OandBandO $1 $3 $5 }
 
-PAndT : PAndT PAndT                       { $1 $2 }
-      | Prefix Triple                     { PandT $1 $2 }
-      | Triple                            { Triplee $1 }
+PAndT : Y PAndT                           { PAndT $1 $2 }
+      | Y                                 { Y $1 }
+      
 
-Prefix : Prefix Prefix                    { $1 $2 }
-       | "@prefix" name':' URI '.'        { Prefixx $2 $4 }
+Y : Prefix Triple                     { PandTT $1 $2 }
+  | Triple                            { Triplee $1 }
+
+
+Prefix : X Prefix                    { Prefixx $1 $2 }
+       | X                           { X $1 }
+
+X : "@prefix" name':' URI '.'       { Prefixxx $2 $4 } 
 
 Triple : '<' Sub '>' Repeated '.'         { Tripled $2 $4 }
 
@@ -66,20 +72,22 @@ Literal : int                   { LiteralInt $1 }
 URI : '<' Link '>'              { URI $2 }
 
 Shorthand : '<' name '>'      { ShortURIB $2 }
-          | name':' name    { ShortURIP $1 $3 }
+          | name ':' name     { ShortURIP $1 $3 }
+
+Link : "http://" Domain '/'                     { LinkD $2 }
+     | "http://" Domain '/' SubDomain           { LinkDS $2 $4 } 
+     | "http://" Domain '/' Tag                 { LinkDT $2 $4 }
+     | "http://" Domain '/' SubDomain '/' Tag   { LinkDST $2 $4 $6 }  
 
 Tag : '#' name                { Tags $2 }
 
 Domain : name '.' Domain      { Domainss $1 $3 } 
        | name                 { Domains $1 }
 
-SubDomain : name '/' SubDomain  { SubDomainss $1 $3 }
-          | name                { SubDomains $1 }
+SubDomain : N '/' SubDomain  { SubDomainss $1 $3 }
+          | N                { N $1 }
 
-Link : "http://" Domain '/'                     { LinkD $2 }
-     | "http://" Domain '/' SubDomain           { LinkDS $2 $4 } 
-     | "http://" Domain '/' Tag                 { LinkDT $2 $4 }
-     | "http://" Domain '/' SubDomain '/' Tag   { LinkDST $2 $4 $6 }    
+N : name { String $1 }  
 
 { 
 parseError :: [RDFToken] -> a
@@ -93,11 +101,18 @@ data Expr = Base URI
           deriving Show
           
 
-data PAndT = PandT Prefix Triple
-           | Triplee Triple 
+data PAndT = PAndT Y PAndT
            deriving Show
 
-data Prefix = Prefixx String URI 
+data Y = PandTT Prefix Triple
+       | Triplee Triple 
+     deriving Show
+
+data Prefix = Prefixx X Prefix
+            deriving Show
+
+data X = Prefixxx String URI 
+       deriving Show
 
 data Triple = Tripled Sub Repeated
 
@@ -136,6 +151,12 @@ data Shorthand = ShortURIB String
                 | ShortURIP String String
                 deriving Show
 
+data Link = LinkD Domain
+          | LinkDS Domain Subdomain
+          | LinkDT Domain Subdomain
+          | LinkDST Domain Subdomain Tag
+          deriving Show
+          
 data Tag = Tags String
            deriving Show
 
@@ -144,13 +165,10 @@ data Domain = Domainss String Domain
             deriving Show 
             
     
-data Subdomain = Subdomainss String Subdomain
-               | Subdomains String
+data Subdomain = Subdomainss N Subdomain
+               | N N
                deriving Show
 
-data Link = LinkD Domain
-          | LinkDS Domain Subdomain
-          | LinkDT Domain Subdomain
-          | LinkDST Domain Subdomain Tag
-          deriving Show
+data N = String String
+       deriving Show
 }
