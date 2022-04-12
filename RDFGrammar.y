@@ -23,7 +23,7 @@ import RDFToken
     '<'              { TokenLessThan _ }
     '>'              { TokenGreaterThan _ }
     int              { TokenIntLiteral _ $$ }  
-    str              { TokenStrLiteral _ $$ }
+    special          { TokenStrLiteral _ $$ }
 
 %% 
 
@@ -65,9 +65,24 @@ Obj  : URI                      { ObjectURI $1 }
      | Literal                  { ObjectLit $1 }
 
 Literal : int                   { LiteralInt $1 }
-        | str                   { LiteralString $1 }
+        | '"' J '"'             { LiteralString $2 }
         | true                  { LiteralTrue }
         | false                 { LiteralFalse }
+
+J : A J                        { AJ $1 $2 }
+  | A                          { A $1 }
+
+A : special    { Special $1 }
+  | name       { String $1 }
+  | ':'        { Col $1 }
+  | '/'        { Slash $1 }
+  | '#'        { Hash $1 }
+  -- | '"'        { Double $1 }
+  | ';'        { Semi $1 }
+  | ','        { Comma $1 }
+  | '.'        { Dot $1 }
+  | '<'        { Less $1 }
+  | '>'        { More $1 }
 
 URI : '<' Link '>'              { URI $2 }
 
@@ -76,15 +91,12 @@ Shorthand : '<' name '>'      { ShortURIB $2 }
 
 Link : "http://" Domain '/'                     { LinkD $2 }
      | "http://" Domain '/' SubDomain           { LinkDS $2 $4 } 
-     | "http://" Domain '/' Tag                 { LinkDT $2 $4 }
-     | "http://" Domain '/' SubDomain '/' Tag   { LinkDST $2 $4 $6 }  
-
-Tag : '#' name                { Tags $2 }
 
 Domain : name '.' Domain      { Domainss $1 $3 } 
        | name                 { Domains $1 }
 
 SubDomain : N '/' SubDomain  { SubDomainss $1 $3 }
+          | '#' N            { N $1}
           | N                { N $1 }
 
 N : name { String $1 }  
@@ -124,7 +136,6 @@ data ObjList = ObjectListss Obj ObjList
              | ObjectLists Obj
                 deriving Show
 
-
 data Sub = SubjectURI URI
          | SubjectSH Shorthand
          deriving Show
@@ -139,10 +150,27 @@ data Obj = ObjectURI URI
          deriving Show
          
 data Literal = LiteralInt Int
-             | LiteralString String
+             | LiteralString J
              | LiteralTrue
              | LiteralFalse
              deriving Show
+
+data J = AJ A J                       
+       | A A                         
+       deriving Show
+
+data A = Special String
+       | String String
+       | Col TokenColon       
+       | Slash TokenBackSlash
+       | Hash TokenTag
+       | Double TokenQuote
+       -- | Semi TokenSemiColon
+       | Comma TokenComma
+       | Dot TokenFullStop
+       | Less TokenLessThan
+       | More TokenGreaterThan
+       deriving Show
 
 data URI = URIs Link
         deriving Show 
@@ -166,6 +194,7 @@ data Domain = Domainss String Domain
             
     
 data Subdomain = Subdomainss N Subdomain
+               | N N
                | N N
                deriving Show
 

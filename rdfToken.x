@@ -7,8 +7,10 @@ $digit = 0-9
 $alpha = [a-zA-Z] 
 $sign = [\+ \-]
 $name = [a-zA-Z0-9]
-$ascii = [\x00-\x7F]
-
+$special = [^$name\:\/\#\"\;\,\.\<\>]
+--$ascii = [^\"]
+--[\x00-\x7F]
+--\:\/\#\"\;\,\.\<\>  
 tokens :-      
 $white+         ;
   "--".*        ;     
@@ -28,7 +30,7 @@ $white+         ;
   \<                  { \p s -> TokenLessThan p }
   \>                  { \p s -> TokenGreaterThan p }
   $sign? $digit+      { \p s -> TokenIntLiteral p (read s) }  
-  \" $ascii+ \"       { \p s -> TokenStrLiteral p s }
+  $special            { \p s -> TokenStrLiteral p s } 
   
   
 
@@ -55,7 +57,7 @@ data RDFToken =
   TokenLessThan AlexPosn               |
   TokenGreaterThan AlexPosn            |
   TokenIntLiteral AlexPosn Int         |
-  TokenStrLiteral AlexPosn String                                            
+  TokenStrLiteral AlexPosn String                                                
   deriving Show 
 
 -- Write a function tokenPosn in your Alex file that extracts the source code position (line:column) from a given token as a string e.g. "5:43".
