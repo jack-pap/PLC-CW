@@ -104,7 +104,7 @@ SubDomain : name '/' SubDomain  { SubDomainss $1 $3 }
 { 
 parseError :: [RDFToken] -> a
 parseError [] = error "Parse error on empty file" 
-parseError (t:ts) = error ("Parse error at " ++ tokenPosn t ++ show t)
+parseError (t:ts) = error ("Parse error at " ++ tokenPosn t)
 
 data Expr = Base URI 
           | BandO URI PAndT 
