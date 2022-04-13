@@ -29,11 +29,11 @@ import RDFToken
 
 Expr : "@base" URI '.'                    { Base $2 }
      | "@base" URI '.' PAndT              { BandO $2 $4 }
-     | PAndT                              { $1 }
+     | PAndT                              { PAndT $1 }
      | PAndT "@base" URI '.'              { OandB $1 $3 }
      | PAndT "@base" URI '.' PAndT        { OandBandO $1 $3 $5 }
 
-PAndT : Y PAndT                           { PAndT $1 $2 }
+PAndT : Y PAndT                           { PAndTs $1 $2 }
       | Y                                 { Y $1 }
       
 
@@ -46,13 +46,13 @@ Prefix : X Prefix                    { Prefixx $1 $2 }
 
 X : "@prefix" name':' URI '.'       { Prefixxx $2 $4 } 
 
-Triple : '<' Sub '>' Repeated '.'         { Tripled $2 $4 }
+Triple : Sub Repeated '.'         { Tripled $1 $2 }
 
-Repeated : '<' Pred '>' ObjList ';' Repeated { ReRepeated $2 $4 $6 }
-         | '<' Pred '>' ObjList              { Repeatedd $2 $4 }
+Repeated : Pred ObjList ';' Repeated { ReRepeated $1 $2 $4 }
+         | Pred ObjList              { Repeatedd $1 $2 }
 
-ObjList : '<' Obj '>' ',' ObjList { ObjectListss $2 $5 }
-        | '<' Obj '>'             { ObjectLists $2 }
+ObjList : Obj ',' ObjList { ObjectListss $1 $3 }
+        | Obj             { ObjectLists $1 }
 
 Sub  : URI                      { SubjectURI $1 }
      | Shorthand                { SubjectSH $1 }
@@ -73,7 +73,7 @@ J : A J                        { AJ $1 $2 }
   | A                          { A $1 }
 
 A : special    { Special $1 }
-  | name       { String $1 }
+  | name       { Strings $1 }
   | ':'        { Col $1 }
   | '/'        { Slash $1 }
   | '#'        { Hash $1 }
@@ -84,7 +84,7 @@ A : special    { Special $1 }
   | '<'        { Less $1 }
   | '>'        { More $1 }
 
-URI : '<' Link '>'              { URI $2 }
+URI : '<' Link '>'              { URIs $2 }
 
 Shorthand : '<' name '>'      { ShortURIB $2 }
           | name ':' name     { ShortURIP $1 $3 }
@@ -95,38 +95,43 @@ Link : "http://" Domain '/'                     { LinkD $2 }
 Domain : name '.' Domain      { Domainss $1 $3 } 
        | name                 { Domains $1 }
 
-SubDomain : N '/' SubDomain  { SubDomainss $1 $3 }
-          | '#' N            { N $1}
-          | N                { N $1 }
+SubDomain : name '/' SubDomain  { SubDomainss $1 $3 }
+          | '#' name            { Ns $2 }
+          | name                { Nss $1 }
 
-N : name { String $1 }  
+--N : name { S $1 }  
 
 { 
 parseError :: [RDFToken] -> a
 parseError [] = error "Parse error on empty file" 
-parseError (t:ts) = error ("Parse error at " ++ tokenPosn t)
+parseError (t:ts) = error ("Parse error at " ++ tokenPosn t ++ show t)
 
 data Expr = Base URI 
           | BandO URI PAndT 
+          | PAndT PAndT
           | OandB PAndT URI 
           | OandBandO PAndT URI PAndT 
           deriving Show
           
 
-data PAndT = PAndT Y PAndT
+data PAndT = PAndTs Y PAndT
+           | Y Y
            deriving Show
 
+
 data Y = PandTT Prefix Triple
-       | Triplee Triple 
-     deriving Show
+       | Triplee Triple
+       deriving Show
 
 data Prefix = Prefixx X Prefix
+            | X X
             deriving Show
 
 data X = Prefixxx String URI 
        deriving Show
 
 data Triple = Tripled Sub Repeated
+            deriving Show
 
 data Repeated = ReRepeated Pred ObjList Repeated
               | Repeatedd Pred ObjList
@@ -134,7 +139,7 @@ data Repeated = ReRepeated Pred ObjList Repeated
 
 data ObjList = ObjectListss Obj ObjList
              | ObjectLists Obj
-                deriving Show
+             deriving Show
 
 data Sub = SubjectURI URI
          | SubjectSH Shorthand
@@ -160,16 +165,17 @@ data J = AJ A J
        deriving Show
 
 data A = Special String
-       | String String
-       | Col TokenColon       
-       | Slash TokenBackSlash
-       | Hash TokenTag
-       | Double TokenQuote
+       | Strings String
+       | Col RDFToken       
+       | Slash RDFToken
+       | Hash RDFToken
+       | Semi RDFToken
+       | Double RDFToken
        -- | Semi TokenSemiColon
-       | Comma TokenComma
-       | Dot TokenFullStop
-       | Less TokenLessThan
-       | More TokenGreaterThan
+       | Comma RDFToken
+       | Dot RDFToken
+       | Less RDFToken
+       | More RDFToken
        deriving Show
 
 data URI = URIs Link
@@ -181,23 +187,21 @@ data Shorthand = ShortURIB String
 
 data Link = LinkD Domain
           | LinkDS Domain Subdomain
-          | LinkDT Domain Subdomain
-          | LinkDST Domain Subdomain Tag
           deriving Show
           
-data Tag = Tags String
-           deriving Show
+--data Tag = Tags String
+--           deriving Show
 
 data Domain = Domainss String Domain
             | Domains String
             deriving Show 
             
     
-data Subdomain = Subdomainss N Subdomain
-               | N N
-               | N N
+data Subdomain = SubDomainss String Subdomain
+               | Ns String
+               | Nss String
                deriving Show
 
-data N = String String
-       deriving Show
+--data N = S String
+--       deriving Show
 }
