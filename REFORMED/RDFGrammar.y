@@ -94,20 +94,20 @@ import RDFToken
 
 %% 
 
-Expr : SELECT Expr         { Select $2 }
+Expr : SELECT Expr Expr    { Select $2 $3 }
      | FROM Expr           { From $2 }
-     | WHERE Expr          { Where $2 }
-     | AND Expr            { And $2 }
-     | OR Expr             { Or $2 }
+     | Expr WHERE Expr     { Where $1 $3}
+     | Expr AND Expr       { And $1 $3 }
+     | Expr OR Expr        { Or $1 $3 }
      | Expr TYPE Type      { TypeFinder $1 $3 }
      | filename            { FileName $1 }
      | true                { TmTrue }
      | false               { TmFalse }
      | int                 { Integer $1 }
      | str                 { Str $1 }
-     | "@base" Expr        { Base $2 }
-     | "@prefix" Expr      { Prefix $2 }
-     | '*'                 { Asterisks}
+     | "@base"             { Base }
+     | "@prefix"           { Prefix }
+     | '*'                 { Asterisks }
      | filename '.' Type   { CallFromFile $1 $3 }
      | Expr '>' Expr       { Greater $1 $3 }
      | Expr '<' Expr       { Less $1 $3 }
@@ -119,17 +119,17 @@ Expr : SELECT Expr         { Select $2 }
      | '(' Expr ')'        { $2 }                 
              
 
-Type : Bool       { TyBool }
-     | Int        { TyInt }
-     | String     { TyString }
-     | Base       { TyBase }
-     | Prefix     { TyPrefix }
-     | Triple     { TyTriple } 
-     | Sub        { TySub }
-     | Pred       { TyPred }
-     | Obj        { TyObj }
-     | URI        { TyURI }
-     | Filename   { TyFilename }
+Type : Bool                      { TyBool }
+     | Int                       { TyInt }
+     | String                    { TyString }
+     | Base                      { TyBase }
+     | Prefix                    { TyPrefix }
+     | Sub                       { TySub }
+     | Pred                      { TyPred }
+     | Obj                       { TyObj }
+     | Triple Type Type Type     { TyTriple $2 $3 $4 } 
+     | URI                       { TyURI }
+     | Filename                  { TyFilename }
 
 
 { 
@@ -137,16 +137,17 @@ parseError :: [RDFToken] -> a
 parseError [] = error "Parse error on empty file" 
 parseError (t:ts) = error ("Parse error at " ++ tokenPosn t)
 
-data Type = TyBool | TyInt | TyString | TyBase | TyPrefix | TyTriple | TySub | TyPred
-            | TyObj | TyURI | TyFilename
-        deriving (Show, Eq)
+data Type = TyBool | TyInt | TyString | TyBase | TyPrefix | TySub | TyPred
+            | TyObj | TyTriple Type Type Type | TyURI | TyFilename
+            deriving (Show, Eq)
         
 type Environment = [ (String,Expr) ]
 
-data Expr = Select Expr | From Expr | Where Expr | And Expr | Or Expr | TypeFinder Expr Type
-            | FileName Expr | TmTrue | TmFalse | Integer Int | Str String | Base Expr 
-            | Prefix Expr | Asterisks | CallFromFile Expr Type | Greater Expr Expr
+data Expr = Select Expr Expr | From Expr | Where Expr Expr | And Expr Expr | Or Expr Expr | TypeFinder Expr Type
+            | FileName String | TmTrue | TmFalse | Integer Int | Str String | Base 
+            | Prefix | Asterisks | CallFromFile String Type | Greater Expr Expr
             | Less Expr Expr | Equal Expr Expr | NotEqual Expr Expr 
             | LessThanEqual Expr Expr | GreaterThanEqual Expr Expr | Comma Expr Expr
             | Lambda String Type Expr | Cl String Type Expr Environment
+            deriving (Show, Eq)
 }
