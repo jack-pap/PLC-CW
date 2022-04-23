@@ -2,20 +2,26 @@
 module RDFEval where
 import RDFGrammar
 
---Data structures as defined in RDFGrammer:
---data Type = TyBool | TyInt | TyString | TyBase | TyPrefix | TySub | TyPred
---            | TyObj | TyTriple Type Type Type | TyURI | TyFilename
---            deriving (Show, Eq)
+import Helper
+
+-- --Data structures as defined in RDFGrammer:
+-- data Type = TyBool | TyInt | TyString | TySub | TyPred
+--             | TyObj | TyFilename
+--             deriving (Show, Eq)
         
 --type Environment = [ (String,Expr) ]
 
---data Expr = Select Expr Expr | From Expr | Where Expr Expr | And Expr Expr | Or Expr Expr | TypeFinder Expr Type
---            | FileName String | TmTrue | TmFalse | Integer Int | Str String | Base 
---            | Prefix | Asterisks | CallFromFile String Type | Greater Expr Expr
---            | Less Expr Expr | Equal Expr Expr | NotEqual Expr Expr 
---            | LessThanEqual Expr Expr | GreaterThanEqual Expr Expr | Comma Expr Expr
---            | Lambda String Type Expr | Cl String Type Expr Environment
---            deriving (Show, Eq)
+-- data Expr = SelectWithCond Expr Expr Expr | Select Expr Expr | And Expr Expr | Or Expr Expr 
+--             | TypeFinder Expr Type | If Expr Expr Expr | Replace Expr Expr 
+--             | Subs | Preds | Objs
+--             | FileName String | TmTrue | TmFalse | Integer Int | Str String | Base 
+--             | Prefix | Asterisks | CallFromFileSub String | CallFromFilePred String
+--             | CallFromFileObj String | Greater Expr Expr
+--             | Less Expr Expr | Equal Expr Expr | NotEqual Expr Expr 
+--             | LessThanEqual Expr Expr | GreaterThanEqual Expr Expr | Comma Expr Expr 
+--             | Plus Expr Expr | Minus Expr Expr | Div Expr Expr | Mult Expr Expr
+--             | Lambda String Type Expr | Cl String Type Expr Environment
+--             deriving (Show, Eq)
 
 data Frame = HSelect Expr Environment | SelectH Expr | FromH 
            | HWhere Expr Environment | WhereH Expr 
@@ -24,9 +30,10 @@ data Frame = HSelect Expr Environment | SelectH Expr | FromH
            | HGreater Expr Environment | GreaterH Expr 
            | HLess Expr Environment | LessH Expr 
            | HEqual Expr Environment | EqualH Expr 
-           | HNotEqual Expr Environment | NotEqualH Exp
+           | HNotEqual Expr Environment | NotEqualH Expr
            | HLessThanEqual Expr Environment | LessThanEqualH Expr 
            | HGreaterThanEqual Expr Environment | GreaterThanEqualH Expr
+           | HComma Expr Environment | CommaH Expr
            
 type Kontinuation = [ Frame ]
 type State = (Expr,Environment,Kontinuation)
@@ -52,44 +59,79 @@ eval1 :: State -> State
 -- Rule for terminated evaluations
 eval1 (v,env,[]) | isValue v = (v,env,[])
 
--- Evaluation rules for less than operator
-eval1 ((TmCompare e1 e2),env,k) = (e1,env,(HCompare e2 env):k)
-eval1 ((TmInt n),env1,(HCompare e env2):k) = (e,env2,(CompareH (TmInt n)) : k)
-eval1 ((TmInt m),env,(CompareH (TmInt n)):k) | n < m = (TmTrue,[],k)
-                                             | otherwise = (TmFalse,[],k)
+-- Evaluation rules for From operator
+eval1 (Select e1 e2,env,k) = (e1,env,(HSelect e2 env):k)
+eval1 (Asterisks,env1,(HSelect e env2):k) = (e,env2,(SelectH (Asterisks)):k)
+eval1 ((Str n),env,(SelectH (Asterisks)):k) = (Str ((getAllFiles (removeWhiteSpace (splitOn ',' n)))),[],k)
 
--- Evaluation rules for plus operator
-eval1 ((TmAdd e1 e2),env,k) = (e1,env,(HAdd e2 env):k)
-eval1 ((TmInt n),env1,(HAdd e env2):k) = (e,env2,(AddH (TmInt n)) : k)
-eval1 ((TmInt m),env,(AddH (TmInt n)):k) = (TmInt (n + m),[],k)
+-- Evaluation rules for And operator
+eval1 ((And e1 e2),env,k) = (e1,env,(HAnd e2 env):k)
+eval1 ((TmTrue),env1,(HAnd e env2):k) = (e,env2,(AndH (TmTrue)) : k)
+eval1 ((TmTrue),env,(AndH (TmTrue)):k) = (TmTrue,[],k)
 
--- Evaluation rules for projections
-eval1 ((TmFst e1),env,k) = (e1,env, FstH : k)
-eval1 ((TmSnd e1),env,k) = (e1,env, SndH : k)
-eval1 ((TmPair v w),env, FstH:k) | isValue v && isValue w = ( v , [] , k)
-eval1 ((TmPair v w),env, SndH:k) | isValue v && isValue w = ( w , [] , k)
+eval1 ((TmTrue),env1,(HAnd e env2):k) = (e,env2,(AndH (TmTrue)) : k)
+eval1 ((TmFalse),env,(AndH (TmTrue)):k) = (TmFalse,[],k)
 
--- Evaluation rules for pairs
-eval1 ((TmPair e1 e2),env,k) = (e1,env,(HPair e2 env):k)
-eval1 (v,env1,(HPair e env2):k) | isValue v = (e,env2,(PairH v) : k)
-eval1 (w,env,(PairH v):k) | isValue w = ( (TmPair v w),[],k)
+eval1 ((TmFalse),env1,(HAnd e env2):k) = (e,env2,(AndH (TmFalse)) : k)
+eval1 ((TmFalse),env,(AndH (TmFalse)):k) = (TmFalse,[],k)
 
--- Evaluation rules for if-then-else
-eval1 ((TmIf e1 e2 e3),env,k) = (e1,env,(HIf e2 e3 env):k)
-eval1 (TmTrue,env1,(HIf e2 e3 env2):k) = (e2,env2,k)
-eval1 (TmFalse,env1,(HIf e2 e3 env2):k) = (e3,env2,k)
+eval1 ((TmFalse),env1,(HAnd e env2):k) = (e,env2,(AndH (TmFalse)) : k)
+eval1 ((TmTrue),env,(AndH (TmFalse)):k) = (TmFalse,[],k)
 
--- Evaluation rules for Let blocks
-eval1 ((TmLet x typ e1 e2),env,k) = (e1,env,(HLet x typ e2 env):k)
-eval1 (v,env1,(HLet x typ e env2):k) | isValue v = (e, update env2 x v , k)
+-- Evaluation rules for Or operator
+eval1 ((Or e1 e2),env,k) = (e1,env,(HOr e2 env):k)
+eval1 ((TmTrue),env1,(HOr e env2):k) = (e,env2,(OrH (TmTrue)) : k)
+eval1 ((TmTrue),env,(OrH (TmTrue)):k) = (TmTrue,[],k)
 
---  Rule to make closures from lambda abstractions.
-eval1 ((TmLambda x typ e),env,k) = ((Cl x typ e env), [], k)
+eval1 ((TmTrue),env1,(HOr e env2):k) = (e,env2,(OrH (TmTrue)) : k)
+eval1 ((TmFalse),env,(OrH (TmTrue)):k) = (TmTrue,[],k)
 
--- Evaluation rules for application
-eval1 ((TmApp e1 e2),env,k) = (e1,env, (HApp e2 env) : k)
-eval1 (v,env1,(HApp e env2):k ) | isValue v = (e, env2, (AppH v) : k)
-eval1 (v,env1,(AppH (Cl x typ e env2) ) : k )  = (e, update env2 x v, k)
+eval1 ((TmFalse),env1,(HOr e env2):k) = (e,env2,(OrH (TmFalse)) : k)
+eval1 ((TmTrue),env,(OrH (TmFalse)):k) = (TmTrue,[],k)
+
+eval1 ((TmFalse),env1,(HOr e env2):k) = (e,env2,(OrH (TmFalse)) : k)
+eval1 ((TmFalse),env,(OrH (TmFalse)):k) = (TmFalse,[],k)                                      
+                                      
+
+-- Evaluation rules for Greater operator
+eval1 ((Greater e1 e2),env,k) = (e1,env,(HGreater e2 env):k)
+eval1 ((Integer n),env1,(HGreater e env2):k) = (e,env2,(GreaterH (Integer n)) : k)
+eval1 ((Integer m),env,(GreaterH (Integer n)):k) | n > m = (TmTrue,[],k)
+                                                 | otherwise = (TmFalse,[],k)
+
+eval1 ((Greater e1 e2),env,k) = (e1,env,(HGreater e2 env):k)
+eval1 ((Str n),env1,(HGreater e env2):k) = (e,env2,(GreaterH (Str n)) : k)
+eval1 ((Str m),env,(GreaterH (Integer n)):k) = (TmFalse,[],k)
+
+-- Evaluation rules for Less operator
+eval1 ((Less e1 e2),env,k) = (e1,env,(HLess e2 env):k)
+eval1 ((Integer n),env1,(HLess e env2):k) = (e,env2,(LessH (Integer n)) : k)
+eval1 ((Integer m),env,(LessH (Integer n)):k) | n < m = (TmTrue,[],k)
+                                              | otherwise = (TmFalse,[],k)
+
+-- Evaluation rules for Equal operator
+eval1 ((Equal e1 e2),env,k) | (isValue e1 && isValue e2) && (e1 == e2) = (TmTrue,[],k)
+                            | (isValue e1 && isValue e2) && (e1 /= e2) = (TmFalse,[],k)
+                            | otherwise = error "Wrong types in your equal parameters"
+
+
+-- Evaluation rules for NotEqual operator
+eval1 ((NotEqual e1 e2),env,k) | (isValue e1 && isValue e2) && (e1 /= e2) = (TmTrue,[],k)
+                               | (isValue e1 && isValue e2) && (e1 == e2) = (TmFalse,[],k)
+                               | otherwise = error "Wrong types in your equal parameters"
+
+
+-- Evaluation rules for Greater than or equal operator
+eval1 ((GreaterThanEqual e1 e2),env,k) = (e1,env,(HGreaterThanEqual e2 env):k)
+eval1 ((Integer n),env1,(HLess e env2):k) = (e,env2,(GreaterThanEqualH (Integer n)) : k)
+eval1 ((Integer m),env,(LessH (Integer n)):k) | n >= m = (TmTrue,[],k)
+                                              | otherwise = (TmFalse,[],k)
+                                              
+-- Evaluation rules for Less than or equal operator
+eval1 ((LessThanEqual e1 e2),env,k) = (e1,env,(HLessThanEqual e2 env):k)
+eval1 ((Integer n),env1,(HLessThanEqual e env2):k) = (e,env2,(LessThanEqualH (Integer n)) : k)
+eval1 ((Integer m),env,(LessThanEqualH (Integer n)):k) | n <= m = (TmTrue,[],k)
+                                                       | otherwise = (TmFalse,[],k)
 
 -- Rule for runtime errors
 eval1 (e,env,k) = error "Evaluation Error"
@@ -108,6 +150,6 @@ unparse (TmTrue) = "true"
 unparse (TmFalse) = "false"
 unparse (Base) = "@base"
 unparse (Prefix) = "@prefix"
-unparse (Asterisks) = '*'
+unparse (Asterisks) = "*"
 unparse (Str n) = n
 unparse _ = "Unknown"

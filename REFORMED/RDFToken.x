@@ -19,13 +19,9 @@ $white+         ;
   Bool                { \p s -> TokenTypeBool p }
   Int                 { \p s -> TokenTypeInt p }
   String              { \p s -> TokenTypeString p }
-  Base                { \p s -> TokenTypeBase p }
-  Prefix              { \p s -> TokenTypePrefix p }
-  Triple              { \p s -> TokenTypeTriple p }
   Sub                 { \p s -> TokenTypeSub p }
   Pred                { \p s -> TokenTypePred p }
   Obj                 { \p s -> TokenTypeObj p }
-  URI                 { \p s -> TokenTypeURI p }
   Filename            { \p s -> TokenTypeFile p }
 
   -------------------------------
@@ -38,13 +34,18 @@ $white+         ;
   AND                 { \p s -> TokenAnd p }
   OR                  { \p s -> TokenOr p }
   TYPE                { \p s -> TokenType p }
+  IF                  { \p s -> TokenIf p }
+  REPLACE             { \p s -> TokenReplace p }
+  SUB                 { \p s -> TokenSubs p }
+  PRED                { \p s -> TokenPreds p }
+  OBJ                 { \p s -> TokenObjs p }
 
 
   -------------------------------
   --           I/O             --
   -------------------------------
-  \" $ascii+ \. "ttl" \"    { \p s -> TokenFilename p s }
 
+  \" $ascii+ \. "ttl" \"    { \p s -> TokenFilename p s }
   
   -------------------------------
   --          LITERALS         --
@@ -54,8 +55,6 @@ $white+         ;
   false               { \p s -> TokenFalse p } 
   $sign? $digit+      { \p s -> TokenIntLiteral p (read s) } 
   \" $ascii+ \"       { \p s -> TokenStringLiteral p s}
-  "@base"             { \p s -> TokenBase p }
-  "@prefix"           { \p s -> TokenPrefix p }
 
   -------------------------------
   --           SYMBOLS         --
@@ -66,6 +65,7 @@ $white+         ;
   \.                  { \p s -> TokenFullStop p }
   \(                  { \p s -> TokenLeftBracket p }
   \)                  { \p s -> TokenRightBracket p }
+  "->"                {\p s -> TokenArrow p }
 
   -----------------------------------------
   --           COMPARE OPERATORS         --
@@ -77,6 +77,16 @@ $white+         ;
   "!="                { \p s -> TokenNotEqual p }
   ">="                { \p s -> TokenGreaterOrEqual p }
   "<="                { \p s -> TokenLessOrEqual p }
+
+  -----------------------------------------
+  --           ARITHMETIC OPERATORS      --
+  -----------------------------------------
+
+  \+                  { \p s -> TokenPlusSign p }
+  \-                  { \p s -> TokenMinusSign p }
+  \/                  { \p s -> TokenDivSign p }
+  \x                  { \p s -> TokenMultSign p }
+
 {
   
 -- WHITESPACE MAY NOT BE NEEDED ASK TO MAKE SURE
@@ -87,9 +97,6 @@ data RDFToken =
   TokenTypeBool AlexPosn               |
   TokenTypeInt AlexPosn                |
   TokenTypeString AlexPosn             |
-  TokenTypeBase AlexPosn               |
-  TokenTypePrefix AlexPosn             |
-  TokenTypeTriple AlexPosn             |
   TokenTypeSub AlexPosn                |
   TokenTypePred AlexPosn               |
   TokenTypeObj AlexPosn                |
@@ -101,24 +108,32 @@ data RDFToken =
   TokenAnd AlexPosn                    |
   TokenOr AlexPosn                     |
   TokenType AlexPosn                   |
+  TokenIf AlexPosn                     |
+  TokenReplace AlexPosn                |
+  TokenSubs AlexPosn                   |
+  TokenPreds AlexPosn                  |
+  TokenObjs AlexPosn                   |
   TokenFilename AlexPosn String        |
   TokenTrue AlexPosn                   |
   TokenFalse AlexPosn                  |
   TokenIntLiteral AlexPosn Int         |
   TokenStringLiteral AlexPosn String   |
-  TokenBase AlexPosn                   |
-  TokenPrefix AlexPosn                 |
   TokenAsterisks AlexPosn              |
   TokenComma AlexPosn                  |
   TokenFullStop AlexPosn               |
   TokenLeftBracket AlexPosn            |
   TokenRightBracket AlexPosn           |
+  TokenArrow AlexPosn                  |
   TokenGreaterThan AlexPosn            |
   TokenLessThan AlexPosn               |
   TokenEqual AlexPosn                  |
   TokenNotEqual AlexPosn               |
   TokenGreaterOrEqual AlexPosn         |
-  TokenLessOrEqual AlexPosn                                     
+  TokenLessOrEqual AlexPosn            |
+  TokenPlusSign AlexPosn               |
+  TokenMinusSign AlexPosn              |
+  TokenDivSign AlexPosn                |   
+  TokenMultSign AlexPosn
   deriving Show 
 
 -- Write a function tokenPosn in your Alex file that extracts the source code position (line:column) from a given token as a string e.g. "5:43".
@@ -132,9 +147,6 @@ tokenPosn :: RDFToken -> String
 tokenPosn (TokenTypeBool (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenTypeInt  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenTypeString  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
-tokenPosn (TokenTypeBase  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
-tokenPosn (TokenTypePrefix (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
-tokenPosn (TokenTypeTriple  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenTypeSub  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenTypePred  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenTypeObj  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
@@ -151,6 +163,11 @@ tokenPosn (TokenWhere  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenAnd  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenOr (AlexPn a l c)) = show(l) ++ ":" ++ show(c)   
 tokenPosn (TokenType (AlexPn a l c)) = show(l) ++ ":" ++ show(c) 
+tokenPosn (TokenIf (AlexPn a l c)) = show(l) ++ ":" ++ show(c)   
+tokenPosn (TokenReplace (AlexPn a l c)) = show(l) ++ ":" ++ show(c) 
+tokenPosn (TokenSubs (AlexPn a l c)) = show(l) ++ ":" ++ show(c) 
+tokenPosn (TokenPreds (AlexPn a l c)) = show(l) ++ ":" ++ show(c) 
+tokenPosn (TokenObjs (AlexPn a l c)) = show(l) ++ ":" ++ show(c) 
 
 -------------------------------
 --          I/O         --
@@ -165,8 +182,6 @@ tokenPosn (TokenTrue (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenFalse (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenIntLiteral (AlexPn a l c) i) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenStringLiteral (AlexPn a l c) i) = show(l) ++ ":" ++ show(c)
-tokenPosn (TokenBase (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
-tokenPosn (TokenPrefix (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 
 -------------------------------
 --          SYMBOLS          --
@@ -177,6 +192,7 @@ tokenPosn (TokenComma (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenFullStop (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenLeftBracket (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenRightBracket (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
+tokenPosn (TokenArrow (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 
 -----------------------------------------
 --           COMPARE OPERATORS         --
@@ -188,5 +204,14 @@ tokenPosn (TokenEqual (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenNotEqual (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenGreaterOrEqual (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenLessOrEqual (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
+
+-----------------------------------------
+--           ARITHMETIC OPERATORS      --
+-----------------------------------------
+
+tokenPosn (TokenPlusSign (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
+tokenPosn (TokenMinusSign (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
+tokenPosn (TokenDivSign (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
+tokenPosn (TokenMultSign (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 
 }
