@@ -122,10 +122,8 @@ Selectors : '*'                                  { Asterisks }
           | filename '.' OBJ                     { CallFromFileObj $1 }
           | Selectors ',' Selectors              { $1 $3 }
                       
-
 FileList : filename              { Name $1 }
          | filename ',' FileList { Names $1 $3 }
-
 
 Comparators : Expr AND Expr                        { And $1 $3 }
             | Expr OR Expr                         { Or $1 $3 }
@@ -148,12 +146,12 @@ Comparators : Expr AND Expr                        { And $1 $3 }
             | Comparators '=' Comparators          { Equal $1 $3 }
             | Comparators "!=" Comparators         { NotEqual $1 $3 }
             | Comparators "<=" Comparators         { LessThanEqual $1 $3 }
-            | Comparators ">=" Comparators                       { GreaterThanEqual $1 $3 }
-            | Comparators ',' Comparators                        { Comma $1 $3 }
-            | Comparators '+' Comparators                        { Plus $1 $3 }
-            | Comparators '-' Comparators                        { Minus $1 $3 }
-            | Comparators '/' Comparators                        { Div $1 $3 }
-            | Comparators 'x' Comparators                        { Mult $1 $3 }
+            | Comparators ">=" Comparators         { GreaterThanEqual $1 $3 }
+            | Comparators ',' Comparators          { Comma $1 $3 }
+            | Comparators '+' Comparators          { Plus $1 $3 }
+            | Comparators '-' Comparators          { Minus $1 $3 }
+            | Comparators '/' Comparators          { Div $1 $3 }
+            | Comparators 'x' Comparators          { Mult $1 $3 }
             | '(' Comparators ')'                  { $2 }
 
 Type : Bool                      { TyBool }
@@ -177,20 +175,24 @@ data Type = TyBool | TyInt | TyString | TyTriple | TySub | TyPred
         
 type Environment = [ (String,Expr) ]
 
-data Expr = SelectWithCond Expr FileList Expr | Select Expr FileList | And Expr Expr | Or Expr Expr 
-            | TypeFinder Expr Type | If Expr Expr Expr | Replace Expr Expr 
-            | Triple | Subs | Preds | Objs
-            | TmTrue | TmFalse | Integer Int | Str String 
-            | Asterisks | CallFromFileSub String | CallFromFilePred String
-            | CallFromFileObj String | Greater Expr Expr
-            | Less Expr Expr | Equal Expr Expr | NotEqual Expr Expr 
-            | LessThanEqual Expr Expr | GreaterThanEqual Expr Expr | Comma Expr Expr 
-            | Plus Expr Expr | Minus Expr Expr | Div Expr Expr | Mult Expr Expr
+data Expr = SelectWithCond Expr FileList Expr | Select Expr FileList 
             deriving (Show, Eq)
 
 data FileList = Name String | Names String FileList
               deriving (Show, Eq)
 
-data Comparators = 
+data Comparators = And Expr Expr | Or Expr Expr 
+            | TypeFinder Expr Type | If Expr Expr Expr | Replace Expr Expr 
+            | Triple | Subs | Preds | Objs
+            | TmTrue | TmFalse | Integer Int | Str String 
+            | Greater Expr Expr
+            | Less Expr Expr | Equal Expr Expr | NotEqual Expr Expr 
+            | LessThanEqual Expr Expr | GreaterThanEqual Expr Expr | Comma Expr Expr 
+            | Plus Expr Expr | Minus Expr Expr | Div Expr Expr | Mult Expr Expr
+            deriving (Show, Eq)
+
+data Selectors = Asterisks | CallFromFileSub String | CallFromFilePred String
+               | CallFromFileObj String
+               deriving (Show, Eq)
 
 }

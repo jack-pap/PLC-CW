@@ -10,77 +10,88 @@ import RDFGrammar
         
 -- type Environment = [ (String,Expr) ]
 
--- data Expr = SelectWithCond Expr FileList Expr | Select Expr FileList | And Expr Expr | Or Expr Expr 
+-- data Expr = SelectWithCond Expr FileList Expr | Select Expr FileList 
+--             deriving (Show, Eq)
+
+-- data FileList = Name String | Names String FileList
+--               deriving (Show, Eq)
+
+-- data Comparators = And Expr Expr | Or Expr Expr 
 --             | TypeFinder Expr Type | If Expr Expr Expr | Replace Expr Expr 
 --             | Triple | Subs | Preds | Objs
 --             | TmTrue | TmFalse | Integer Int | Str String 
---             | Asterisks | CallFromFileSub String | CallFromFilePred String
---             | CallFromFileObj String | Greater Expr Expr
+--             | Greater Expr Expr
 --             | Less Expr Expr | Equal Expr Expr | NotEqual Expr Expr 
 --             | LessThanEqual Expr Expr | GreaterThanEqual Expr Expr | Comma Expr Expr 
 --             | Plus Expr Expr | Minus Expr Expr | Div Expr Expr | Mult Expr Expr
 --             deriving (Show, Eq)
 
-type TypeEnvironment = [ (String,Type) ]
+-- data Selectors = Asterisks | CallFromFileSub String | CallFromFilePred String
+--                | CallFromFileObj String
+--                deriving (Show, Eq)
 
-getBinding :: String -> TypeEnvironment -> Type
-getBinding x [] = error "Variable binding not found"
-getBinding x ((y,t):tenv) | x == y  = t
-                        | otherwise = getBinding x tenv
 
-addBinding :: String -> Type -> TypeEnvironment -> TypeEnvironment
-addBinding x t tenv = (x,t):tenv
 
-typeOf :: TypeEnvironment -> Expr -> Type
+typeOfE :: Expr -> Type
 
-typeOf tenv (SelectWithCond e1 f1 p1 ) | (typeOf tenv p1 == TyBool) = TyString 
-typeOf tenv (Select e1 f1) = TyString 
--- typeOf tenv (From e1 ) = TyFilename 
-typeOf tenv (And e1 e2 ) | (typeOf tenv e1, typeOf tenv e2) == (TyBool,TyBool)  = TyBool
-typeOf tenv (Or e1 e2) | (typeOf tenv e1, typeOf tenv e2) == (TyBool,TyBool)  = TyBool
-typeOf tenv (TypeFinder e1 t1 ) = t1 
+typeOfE (SelectWithCond e1 f1 p1 ) | (typeOfE p1 == TyBool) = TyString 
+typeOfE (Select e1 f1) = TyString 
+typeOfE _ = error "Type Error"
 
-typeOf tenv (Subs) = TySub 
-typeOf tenv (Preds) = TyPred 
-typeOf tenv (Objs) = TyObj 
+typeOfF :: FileList -> Type 
 
---typeOf tenv (FileName s1) = TyString  
-typeOf tenv (TmTrue ) = TyBool 
-typeOf tenv (TmFalse ) = TyBool 
-typeOf tenv (Integer e1 ) = TyInt
-typeOf tenv (Str e1 ) = TyString
--- typeOf tenv (Base) = TyBase 
--- typeOf tenv (Prefix ) = TyPrefix 
-typeOf tenv (Asterisks ) = TyString
+typeOfF (Name s1 ) = TyFilename 
+typeOfF (Names s1 fl1 ) = TyFilename 
+typeOfF _ = error "Type Error"
 
-typeOf tenv (CallFromFileSub s1) = TyString
-typeOf tenv (CallFromFilePred s1) = TyString
-typeOf tenv (CallFromFileObj s1) = TyString 
+typeOfS :: Selectors -> Type 
 
-typeOf tenv (Greater e1 e2 ) | (typeOf tenv e1, typeOf tenv e2) == (TyInt,TyInt) = TyBool
-                             | (typeOf tenv e1, typeOf tenv e2) == (TyString ,TyInt) = TyBool
-                             | (typeOf tenv e1, typeOf tenv e2) == (TyInt,TyString) = TyBool                            
-typeOf tenv (Less e1 e2 ) | (typeOf tenv e1, typeOf tenv e2) == (TyInt,TyInt) = TyBool
-                          | (typeOf tenv e1, typeOf tenv e2) == (TyString ,TyInt) = TyBool
-                          | (typeOf tenv e1, typeOf tenv e2) == (TyInt,TyString) = TyBool
+typeOfS Asterisks = TyString
+typeOfS (CallFromFileSub s1) = TyString
+typeOfS (CallFromFilePred s1) = TyString
+typeOfS (CallFromFileObj s1) = TyString 
+typeOfS _ = error "Type Error"
 
-typeOf tenv (Equal e1 e2 ) = TyBool
-typeOf tenv (NotEqual e1 e2 ) = TyBool
-typeOf tenv (LessThanEqual e1 e2 ) | (typeOf tenv e1, typeOf tenv e2) == (TyInt,TyInt) = TyBool
-                                   | (typeOf tenv e1, typeOf tenv e2) == (TyString,TyInt) = TyBool
-                                   | (typeOf tenv e1, typeOf tenv e2) == (TyInt,TyString) = TyBool  
+typeOfC :: Comparators -> Type 
 
-typeOf tenv (GreaterThanEqual e1 e2 ) | (typeOf tenv e1, typeOf tenv e2) == (TyInt,TyInt) = TyBool
-                                      | (typeOf tenv e1, typeOf tenv e2) == (TyString,TyInt) = TyBool
-                                      | (typeOf tenv e1, typeOf tenv e2) == (TyInt,TyString) = TyBool   
-typeOf tenv (Comma e1 e2 ) = TyString 
+typeOfC (And e1 e2 ) | (typeOfE  e1, typeOfE  e2) == (TyBool,TyBool)  = TyBool
+typeOfC (Or e1 e2) | (typeOfE  e1, typeOfE  e2) == (TyBool,TyBool)  = TyBool
+typeOfC (TypeFinder e1 t1 ) = t1 
 
-typeOf tenv (Plus e1 e2 ) = TyInt
-typeOf tenv (Minus e1 e2 ) = TyInt
-typeOf tenv (Div e1 e2 ) = TyInt
-typeOf tenv (Mult e1 e2 ) = TyInt
+typeOfC Subs = TySub 
+typeOfC Preds = TyPred 
+typeOfC Objs = TyObj 
 
-typeOf tenv _ = error "Type Error"
+typeOfC TmTrue = TyBool 
+typeOfC TmFalse = TyBool 
+typeOfC (Integer e1)  = TyInt
+typeOfC (Str e1)  = TyString
+
+typeOfC (Greater e1 e2 ) | (typeOfE e1, typeOfE e2) == (TyInt,TyInt) = TyBool
+                        | (typeOfE e1, typeOfE e2) == (TyString ,TyInt) = TyBool
+                        | (typeOfE e1, typeOfE e2) == (TyInt,TyString) = TyBool                            
+typeOfC (Less e1 e2 ) | (typeOfE e1, typeOfE e2) == (TyInt,TyInt) = TyBool
+                     | (typeOfE e1, typeOfE e2) == (TyString ,TyInt) = TyBool
+                     | (typeOfE e1, typeOfE e2) == (TyInt,TyString) = TyBool
+
+typeOfC (Equal e1 e2 ) = TyBool
+typeOfC (NotEqual e1 e2 ) = TyBool
+typeOfC (LessThanEqual e1 e2 ) | (typeOfE e1, typeOfE e2) == (TyInt,TyInt) = TyBool
+                              | (typeOfE e1, typeOfE e2) == (TyString,TyInt) = TyBool
+                              | (typeOfE e1, typeOfE e2) == (TyInt,TyString) = TyBool  
+
+typeOfC (GreaterThanEqual e1 e2 ) | (typeOfE e1, typeOfE e2) == (TyInt,TyInt) = TyBool
+                                 | (typeOfE e1, typeOfE e2) == (TyString,TyInt) = TyBool
+                                 | (typeOfE e1, typeOfE e2) == (TyInt,TyString) = TyBool   
+typeOfC (Comma e1 e2 ) = TyString 
+
+typeOfC (Plus e1 e2 ) = TyInt
+typeOfC (Minus e1 e2 ) = TyInt
+typeOfC (Div e1 e2 )  = TyInt
+typeOfC (Mult e1 e2 ) = TyInt
+
+typeOfC _ = error "Type Error"
+
 
 -- Function for printing the results of the TypeCheck
 unparseType :: Type -> String

@@ -13,7 +13,7 @@ main' = do putStrLn ("Ayack Interactive Mode - enter an expression : ")
            let parsedProg = parseCalc (alexScanTokens sourceText)
            putStrLn ("Parsed as " ++ (show parsedProg) ++ "\n")
            putStrLn ("Type Checking : " ++ (show parsedProg) ++ "\n")
-           let typedProg = typeOf [] parsedProg
+           let typedProg = typeOfE parsedProg
            putStrLn ("Type Checking Passed with type " ++ (unparseType typedProg) ++ "\n")
            main'
 
