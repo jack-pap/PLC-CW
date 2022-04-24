@@ -19,6 +19,7 @@ $white+         ;
   Bool                { \p s -> TokenTypeBool p }
   Int                 { \p s -> TokenTypeInt p }
   String              { \p s -> TokenTypeString p }
+  Triple              { \p s -> TokenTypeTriple p }
   Sub                 { \p s -> TokenTypeSub p }
   Pred                { \p s -> TokenTypePred p }
   Obj                 { \p s -> TokenTypeObj p }
@@ -36,6 +37,7 @@ $white+         ;
   TYPE                { \p s -> TokenType p }
   IF                  { \p s -> TokenIf p }
   REPLACE             { \p s -> TokenReplace p }
+  TRIPLE              { \p s -> TokenTriple p }
   SUB                 { \p s -> TokenSubs p }
   PRED                { \p s -> TokenPreds p }
   OBJ                 { \p s -> TokenObjs p }
@@ -97,6 +99,7 @@ data RDFToken =
   TokenTypeBool AlexPosn               |
   TokenTypeInt AlexPosn                |
   TokenTypeString AlexPosn             |
+  TokenTypeTriple AlexPosn             |
   TokenTypeSub AlexPosn                |
   TokenTypePred AlexPosn               |
   TokenTypeObj AlexPosn                |
@@ -110,6 +113,7 @@ data RDFToken =
   TokenType AlexPosn                   |
   TokenIf AlexPosn                     |
   TokenReplace AlexPosn                |
+  TokenTriple AlexPosn                 |
   TokenSubs AlexPosn                   |
   TokenPreds AlexPosn                  |
   TokenObjs AlexPosn                   |
@@ -145,12 +149,13 @@ tokenPosn :: RDFToken -> String
 ------------------------------- 
 
 tokenPosn (TokenTypeBool (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
-tokenPosn (TokenTypeInt  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
-tokenPosn (TokenTypeString  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
-tokenPosn (TokenTypeSub  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
-tokenPosn (TokenTypePred  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
-tokenPosn (TokenTypeObj  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
-tokenPosn (TokenTypeURI  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
+tokenPosn (TokenTypeInt (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
+tokenPosn (TokenTypeString (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
+tokenPosn (TokenTypeTriple (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
+tokenPosn (TokenTypeSub (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
+tokenPosn (TokenTypePred (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
+tokenPosn (TokenTypeObj (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
+tokenPosn (TokenTypeURI (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenTypeFile (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 
 -------------------------------
@@ -158,13 +163,14 @@ tokenPosn (TokenTypeFile (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 -------------------------------
 
 tokenPosn (TokenSelect (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
-tokenPosn (TokenFrom  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
-tokenPosn (TokenWhere  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
-tokenPosn (TokenAnd  (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
+tokenPosn (TokenFrom (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
+tokenPosn (TokenWhere (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
+tokenPosn (TokenAnd (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenOr (AlexPn a l c)) = show(l) ++ ":" ++ show(c)   
 tokenPosn (TokenType (AlexPn a l c)) = show(l) ++ ":" ++ show(c) 
 tokenPosn (TokenIf (AlexPn a l c)) = show(l) ++ ":" ++ show(c)   
 tokenPosn (TokenReplace (AlexPn a l c)) = show(l) ++ ":" ++ show(c) 
+tokenPosn (TokenTriple (AlexPn a l c)) = show(l) ++ ":" ++ show(c)
 tokenPosn (TokenSubs (AlexPn a l c)) = show(l) ++ ":" ++ show(c) 
 tokenPosn (TokenPreds (AlexPn a l c)) = show(l) ++ ":" ++ show(c) 
 tokenPosn (TokenObjs (AlexPn a l c)) = show(l) ++ ":" ++ show(c) 
